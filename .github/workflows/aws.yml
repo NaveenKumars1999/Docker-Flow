@@ -50,10 +50,34 @@ jobs:
     environment: production
 
     steps:
-    - name: Checkout
-      run: 
-        # Build a docker container and
-        # push it to ECR so that it can
-        # be deployed to ECS.
+
+name: Deploy to AWS Server
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    name: Deploy to AWS EC2
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Install Dependencies
+       run: 
+        # Install the node modules
         npm install
-        ng build
+    - name: Create Production Build
+       run: ng build --configuration=production
+    - name: Set up SSH
+      uses: webfactory/ssh-agent@v0.5.3
+      with:
+        ssh-private-key: ${{ secrets.AWS_SSH_KEY }}
+
+    - name: Copy files to EC2
+      run: |
+        rsync -avz -e "ssh -o StrictHostKeyChecking=no" ./YOUR_LOCAL_DIRECTORY/ ec2-user@YOUR_EC2_IP:/YOUR_REMOTE_DIRECTORY/
+      env:
+        SSH_KNOWN_HOSTS: ${{ secrets.AWS_SSH_KNOWN_HOSTS }}
